@@ -1,3 +1,27 @@
+## 0.25.0
+* You can now reindex the project with the command "reindexing project" (the project is reindexed by default when you open a new window of your project)
+
+## 0.24.0
+* Default keybinding for goto-backtrack changed to ctrl-shift-g (to not override windows/linux keybindings)
+* Ability to change the key to press with "click" in package settings
+
+## 0.23.0
+* Multiple bug fixes
+* Import use of a selected class outside completion by @fuelingtheweb (see #338) (shortcut : ctrl-alt-u)
+
+## 0.22.0
+* Support for `@property` and `@method` annotations (#318)
+
+## 0.21.0
+* Support for atom 1.13 (fix deprecations)
+
+## 0.20.0
+* Support completion and goto on drupal 6/7 functions
+
+## 0.19.0
+* Multiple bug fixes
+* Function's return value type hint parsed (PHP7)
+
 ## 0.18.0
 * Plugin configuration is now more interactive. If there's an error, you'll know it without doing the command
 

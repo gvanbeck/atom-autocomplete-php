@@ -7,7 +7,7 @@ class AbstractProvider
     regex: ''
     selector: '.source.php'
 
-    inclusionPriority: 1
+    inclusionPriority: 10
 
     disableForSelector: '.source.php .comment, .source.php .string'
 
@@ -27,7 +27,8 @@ class AbstractProvider
      * @return array Suggestions
     ###
     getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) ->
-        return @fetchSuggestions({editor, bufferPosition, scopeDescriptor, prefix})
+        new Promise (resolve) =>
+            resolve(@fetchSuggestions({editor, bufferPosition, scopeDescriptor, prefix}))
 
     ###*
      * Builds a snippet for a PHP function

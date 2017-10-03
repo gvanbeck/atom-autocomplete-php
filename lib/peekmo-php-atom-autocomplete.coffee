@@ -34,13 +34,21 @@ module.exports =
             default: ['vendor/autoload.php', 'autoload.php']
             order: 3
 
+        gotoKey:
+            title: 'Goto key'
+            description: 'Key to use with "click" to use goto. By default "alt" (because on macOS, ctrl + click is like right click)'
+            type: 'string'
+            default: 'alt'
+            enum: ['alt', 'ctrl', 'cmd']
+            order: 4
+
         classMapFiles:
             title: 'Classmap files'
             description: 'Relative path to the files that contains a classmap (array with "className" => "fileName"). By default
              on composer it\'s vendor/composer/autoload_classmap.php'
             type: 'array'
             default: ['vendor/composer/autoload_classmap.php', 'autoload/ezp_kernel.php']
-            order: 4
+            order: 5
 
         insertNewlinesForUseStatements:
             title: 'Insert newlines for use statements.'
@@ -49,14 +57,21 @@ module.exports =
                 separated use statements but will create additional vertical whitespace.'
             type: 'boolean'
             default: false
-            order: 5
+            order: 6
+
+        ensureNewLineAfterNamespace:
+            title: 'Ensure new line after namespace.'
+            description: 'When enabled, the plugin will add a new line before the use statement when it comes directly after the namespace.'
+            type: 'boolean'
+            default: false
+            order: 6
 
         verboseErrors:
             title: 'Errors on file saving showed'
             description: 'When enabled, you\'ll have a notification once an error occured on autocomplete. Otherwise, the message will just be logged in developer console'
             type: 'boolean'
             default: false
-            order: 6
+            order: 7
 
     activate: ->
         config.testConfig()
@@ -81,10 +96,14 @@ module.exports =
         @tooltipManager.deactivate()
         @annotationManager.deactivate()
         @autocompletionManager.deactivate()
+        proxy.deactivate()
 
     consumeStatusBar: (statusBar) ->
         config.statusInProgress.initialize(statusBar)
         config.statusInProgress.attach()
+
+        config.statusErrorAutocomplete.initialize(statusBar)
+        config.statusErrorAutocomplete.attach()
 
     consumePlugin: (plugin) ->
         plugins.plugins.push(plugin)

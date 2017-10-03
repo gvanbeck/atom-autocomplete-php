@@ -1,7 +1,5 @@
 # atom-autocomplete-php
 
-**/!\ This package has a bug with atom 1.3.*(freeze on split pane) Please, use 1.2 or 1.4(beta) in order to avoid that bug**
-
 [![Join the chat at https://gitter.im/Peekmo/atom-autocomplete-php](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Peekmo/atom-autocomplete-php?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 atom-autocomplete-php provides autocompletion for the PHP language for projects that use Composer for dependency management. What cool things can you expect?
@@ -12,11 +10,13 @@ atom-autocomplete-php provides autocompletion for the PHP language for projects 
   * Tooltips for methods, classes, etc. that display information about the item itself.
   * IntellJ-style variable annotations `/** @var MyType $var */` as well as `/** @var $var MyType */`.
   * Shortcut variable annotations (must appear right above the respective variable) `/** @var MyType */`.
+  * Add use statement of class under cursor (ctrl-alt-u)
   * ...
 
 ## What do I need to do to make it work?
 Currently the following limitations or restrictions are present:
   * You must use [Composer](https://getcomposer.org/) for dependency management.
+  * You must have PHP 5.5+ with xml extension installed.
   * You must follow the PSR standards (for the names of classes, methods, namespacing, etc.).
   * You must write proper docblocks for your methods. There currently is no standard around this, but we try to follow the draft PSR-5 standard (which, in turn, is mostly inspired by phpDocumentor's implementation). Minimum requirements for proper autocompletion:
     * `@return` statements for functions and methods.
@@ -43,7 +43,10 @@ You can test your configuration by using a command (cmd - shift - p) : ```Atom A
 ![Settings](http://i.imgur.com/hY5ypG2.png)
 &nbsp;
 
-## Framework integration
+## CMS integration
+  * Built-in support for Drupal 6/7 functions
+
+## Framework integration
   * [Symfony2 plugin](https://github.com/Peekmo/atom-symfony2)
 
 ## What Does Not Work?
@@ -52,6 +55,9 @@ You can test your configuration by using a command (cmd - shift - p) : ```Atom A
 ### Won't Fix (For Now)
   * "Go to definition" will take you to the incorrect location if a class is using a method with the exact same name as one in its own direct traits. You will be taken to the trait method instead of the class method (the latter should take precedence). See also issue #177.
   * `static` and `self` behave mostly like `$this` and can access non-static methods when used in non-static contexts. See also issue #101.
+
+### Conflicts
+  * This package has known conflicts with other PHP autocomplete packages. Disable this one or the other one to avoid some errors.
 
 ## What's Next & Contributing
 Keep in mind that this plugin is under active development. If you find a bug, please, open an issue with more information on how to reproduce. Feel free to contribute ;)

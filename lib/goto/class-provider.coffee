@@ -3,8 +3,8 @@ AbstractProvider = require './abstract-provider'
 module.exports =
 
 class ClassProvider extends AbstractProvider
-    hoverEventSelectors: '.entity.inherited-class, .support.namespace, .support.class, .comment-clickable .region'
-    clickEventSelectors: '.entity.inherited-class, .support.namespace, .support.class'
+    hoverEventSelectors: '.syntax--entity.syntax--inherited-class, .syntax--support.syntax--namespace, .syntax--support.syntax--class, .syntax--comment-clickable .syntax--region'
+    clickEventSelectors: '.syntax--entity.syntax--inherited-class, .syntax--support.syntax--namespace, .syntax--support.syntax--class'
     gotoRegex: /^\\?[A-Z][A-za-z0-9_]*(\\[A-Z][A-Za-z0-9_])*$/
 
     ###*
@@ -96,7 +96,7 @@ class ClassProvider extends AbstractProvider
             regex = /^\\?([A-Za-z0-9_]+)\\?([A-Za-zA-Z_\\]*)?/g
             keywordRegex = /^(array|object|bool|string|static|null|boolean|void|int|integer|mixed|callable)$/gi
 
-            if regex.test(value) && keywordRegex.test(value) == false
+            if value && regex.test(value) && keywordRegex.test(value) == false
                 if value.includes('|')
                     @addMarkerToCommentLine value.split('|'), rowIndex, editor, false, currentIndex, parseInt(key)
 
@@ -114,7 +114,8 @@ class ClassProvider extends AbstractProvider
                         type: 'highlight'
                         class: 'comment-clickable comment'
 
-                    editor.decorateMarker marker, options
+                    if !marker.isDestroyed()
+                        editor.decorateMarker marker, options
 
                     if @allMarkers[editor.getLongTitle()] == undefined
                         @allMarkers[editor.getLongTitle()] = []

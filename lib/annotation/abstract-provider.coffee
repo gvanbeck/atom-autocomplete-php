@@ -71,10 +71,10 @@ class AbstractProvider
 
             textEditorElement = atom.views.getView(editor)
 
-            @$(textEditorElement.shadowRoot).find('.horizontal-scrollbar').on 'scroll', () =>
+            @$(textEditorElement).find('.horizontal-scrollbar').on 'scroll', () =>
                 @removePopover()
 
-            @$(textEditorElement.shadowRoot).find('.vertical-scrollbar').on 'scroll', () =>
+            @$(textEditorElement).find('.vertical-scrollbar').on 'scroll', () =>
                 @removePopover()
 
     ###*
@@ -119,10 +119,7 @@ class AbstractProvider
                 markerLayer = editor.addMarkerLayer(maintainHistory: true)
                 @markerLayers.set(editor, markerLayer)
 
-        marker = (markerLayer ? editor).markBufferRange(range, {
-            maintainHistory : true,
-            invalidate      : 'touch'
-        })
+        marker = (markerLayer ? editor).markBufferRange(range)
 
         decoration = editor.decorateMarker(marker, {
             type: 'line-number',
@@ -157,7 +154,7 @@ class AbstractProvider
     ###
     registerAnnotationEventHandlers: (editor, row, annotationInfo) ->
         textEditorElement = atom.views.getView(editor)
-        gutterContainerElement = @$(textEditorElement.shadowRoot).find('.gutter-container')
+        gutterContainerElement = @$(textEditorElement).find('.gutter-container')
 
         do (editor, gutterContainerElement, annotationInfo) =>
             longTitle = editor.getLongTitle()
@@ -220,11 +217,19 @@ class AbstractProvider
      * @param {TextEditor} editor The editor to search through.
     ###
     removeAnnotations: (editor) ->
-        for i,marker of @markers[editor.getLongTitle()]
-            marker.destroy()
-
-        @markers[editor.getLongTitle()] = []
-        @subAtoms[editor.getLongTitle()]?.dispose()
+        if editor?
+            for i,marker of @markers[editor.getLongTitle()]
+                marker.destroy()
+            @markers[editor.getLongTitle()] = []
+            @subAtoms[editor.getLongTitle()]?.dispose()
+        else
+            for i,name of @markers
+                for i,marker of @markers[name]
+                    marker.destroy()
+            @markers = []
+            for i, subAtom of @subAtoms
+                subAtom.dispose()
+            @subAtoms = []
 
     ###*
      * Rescans the editor, updating all annotations.

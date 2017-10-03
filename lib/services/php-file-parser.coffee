@@ -9,6 +9,9 @@ module.exports =
     # Simple cache to avoid duplicate computation for each providers
     cache: []
 
+    # is a method or a simple function
+    isFunction: false
+
     ###*
      * Retrieves the class the specified term (method or property) is being invoked on.
      *
@@ -75,15 +78,12 @@ module.exports =
             if noCurrent
                 return null
 
-        else if className.charAt(0).toUpperCase() != className.charAt(0)
-            return null
-
         if className and className[0] == "\\"
             return className.substr(1) # FQCN, not subject to any further context.
 
-        usePattern = /(?:use)(?:[^\w\\\\])([\w\\\\]+)(?![\w\\\\])(?:(?:[ ]+as[ ]+)(\w+))?(?:;)/
-        namespacePattern = /(?:namespace)(?:[^\w\\\\])([\w\\\\]+)(?![\w\\\\])(?:;)/
-        definitionPattern = /(?:abstract class|class|trait|interface)\s+(\w+)/
+        usePattern = /^[ \t]*(?:use)(?:[^\w\\\\])([\w\\\\]+)(?![\w\\\\])(?:(?:[ ]+as[ ]+)(\w+))?(?:;)/
+        namespacePattern = /^[ \t]*(?:namespace)(?:[^\w\\\\])([\w\\\\]+)(?![\w\\\\])(?:;)/
+        definitionPattern = /^[ \t]*(?:abstract class|class|trait|interface)\s+(\w+)/
 
         text = editor.getText()
 
@@ -160,7 +160,7 @@ module.exports =
      * @return {int}       The amount of lines added (including newlines), so you can reliably and easily offset your
      *                     rows. This could be zero if a use statement was already present.
     ###
-    addUseClass: (editor, className, allowAdditionalNewlines) ->
+    addUseClass: (editor, className, allowAdditionalNewlines, ensureNewLineAfterNamespace) ->
         if className.split('\\').length == 1 or className.indexOf('\\') == 0
             return null
 
@@ -168,6 +168,7 @@ module.exports =
         bestScore = 0
         placeBelow = true
         doNewLine = true
+        namespaceLine = 0
         lineCount = editor.getLineCount()
 
         # Determine an appropriate location to place the use statement.
@@ -186,6 +187,7 @@ module.exports =
                 break
 
             if line.indexOf('namespace ') >= 0
+                namespaceLine = i
                 bestUse = i
 
             matches = @useStatementRegex.exec(line)
@@ -219,7 +221,7 @@ module.exports =
 
         textToInsert = ''
 
-        if doNewLine and placeBelow
+        if (doNewLine and placeBelow) || (ensureNewLineAfterNamespace and bestUse == namespaceLine)
             textToInsert += lineEnding
 
         textToInsert += "use #{className};" + lineEnding
@@ -441,7 +443,7 @@ module.exports =
                         scopeDescriptor = editor.scopeDescriptorForBufferPosition([line, i]).getScopeChain()
 
                         # Language constructs, such as echo and print, don't require parantheses.
-                        if scopeDescriptor.indexOf('.function.construct') > 0 or scopeDescriptor.indexOf('.comment') > 0
+                        if scopeDescriptor.indexOf('.function.construct') > 0
                             ++i
                             finished = true
                             break
@@ -522,8 +524,21 @@ module.exports =
         # Get the full text
         return [] if not text
 
-        elements = text.split(/(?:\-\>|::)/)
-        # elements = text.split("->")
+        # Keep the content of the parenthesis, then erase it to split
+        matches = text.match(/\(([^()]*|\(([^()]*|\([^()]*\))*\))*\)/g)
+        elements = text.replace(/\(([^()]*|\(([^()]*|\([^()]*\))*\))*\)/g, '()').split(/(?:\-\>|::)/)
+
+        # Then, put the content again
+        idx = 0
+        for key, element of elements
+            if element.indexOf('()') != -1
+                elements[key] = element.replace /\(\)/g, matches[idx]
+                idx += 1
+
+        if elements.length == 1
+          @isFunction = true
+        else
+          @isFunction = false
 
         # Remove parenthesis and whitespaces
         for key, element of elements
@@ -556,7 +571,7 @@ module.exports =
 
         # Regex variable definition
         regexElement = new RegExp("\\#{element}[\\s]*=[\\s]*([^;]+);", "g")
-        regexNewInstance = new RegExp("\\#{element}[\\s]*=[\\s]*new[\\s]*\\\\?([A-Z][a-zA-Z_\\\\]*)+(?:(.+)?);", "g")
+        regexNewInstance = new RegExp("\\#{element}[\\s]*=[\\s]*new[\\s]*\\\\?([a-zA-Z][a-zA-Z_\\\\]*)+(?:(.+)?);", "g")
         regexCatch = new RegExp("catch[\\s]*\\([\\s]*([A-Za-z0-9_\\\\]+)[\\s]+\\#{element}[\\s]*\\)", "g")
 
         lineNumber = bufferPosition.row - 1
@@ -600,7 +615,7 @@ module.exports =
 
             if not bestMatch
                 # Check for function or closure parameter type hints and the docblock.
-                regexFunction = new RegExp("function(?:[\\s]+([a-zA-Z]+))?[\\s]*[\\(](?:(?![a-zA-Z\\_\\\\]*[\\s]*\\#{element}).)*[,\\s]?([a-zA-Z\\_\\\\]*)[\\s]*\\#{element}[a-zA-Z0-9\\s\\$\\\\,=\\\"\\\'\(\)]*[\\s]*[\\)]", "g")
+                regexFunction = new RegExp("function(?:[\\s]+([_a-zA-Z]+))?[\\s]*[\\(](?:(?![a-zA-Z\\_\\\\]*[\\s]*\\#{element}).)*[,\\s]?([a-zA-Z\\_\\\\]*)[\\s]*\\#{element}[a-zA-Z0-9\\s\\$\\\\,=\\\"\\\'\(\)]*[\\s]*[\\)]", "g")
                 matches = regexFunction.exec(line)
 
                 if null != matches
@@ -665,13 +680,16 @@ module.exports =
         if not calledClass
             calledClass = @getCalledClass(editor, term, bufferPosition)
 
-        if not calledClass
+        if not calledClass && not @isFunction
             return
 
         proxy = require '../services/php-proxy.coffee'
-        methods = proxy.methods(calledClass)
+        if @isFunction
+          methods = proxy.functions()
+        else
+          methods = proxy.methods(calledClass)
 
-        if not methods
+        if not methods || not methods?
             return
 
         if methods.error? and methods.error != ''
@@ -683,7 +701,7 @@ module.exports =
                 console.log 'Failed to get methods for ' + calledClass + ' : ' + methods.error.message
 
             return
-        if methods.values?.hasOwnProperty(term) == -1
+        if !methods.values?.hasOwnProperty(term)
             return
 
         value = methods.values[term]

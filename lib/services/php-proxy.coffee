@@ -37,7 +37,6 @@ module.exports =
                         args =  [__dirname + "/../../php/parser.php",  directory.path].concat(command)
                         if noparser
                             args = command
-
                         stdout = exec.spawnSync(config.config.php, args, options).output[1].toString('ascii')
 
                         delete @currentProcesses[processKey]
@@ -61,6 +60,8 @@ module.exports =
                 return res
             else
                 if not @currentProcesses[processKey]?
+                    config.statusErrorAutocomplete.update("Autocomplete failure", false)
+
                     if processKey.indexOf("--refresh") != -1
                         config.statusInProgress.update("Indexing...", true)
 
@@ -68,12 +69,25 @@ module.exports =
                     if noparser
                         args = command
 
-                    @currentProcesses[processKey] = exec.exec(config.config.php + " " + args.join(" "), options, (error, stdout, stderr) =>
+                    @currentProcesses[processKey] = exec.spawn(config.config.php, args, options)
+                    @currentProcesses[processKey].on("exit", (exitCode) =>
                         delete @currentProcesses[processKey]
+                    )
+
+                    commandData = ''
+                    @currentProcesses[processKey].stdout.on("data", (data) =>
+                        commandData += data.toString()
+                    )
+
+                    @currentProcesses[processKey].on("close", () =>
+                        if processKey.indexOf("--functions") != -1
+                            try
+                                @data.functions = JSON.parse(commandData)
+                            catch err
+                                config.statusErrorAutocomplete.update("Autocomplete failure", true)
 
                         if processKey.indexOf("--refresh") != -1
                             config.statusInProgress.update("Indexing...", false)
-                        return stdout
                     )
 
     ###*
@@ -138,6 +152,9 @@ module.exports =
             methods: [],
             composer: null
 
+        # Fill the functions array because it can take times
+        @functions()
+
     ###*
      * Autocomplete for classes name
      * @return {array}
@@ -165,12 +182,12 @@ module.exports =
 
     ###*
      * Autocomplete for internal PHP functions
+     *
      * @return {array}
     ###
     functions: () ->
         if not @data.functions?
-            res = @execute(["--functions"], false)
-            @data.functions = res
+            @execute(["--functions"], true)
 
         return @data.functions
 
@@ -251,3 +268,11 @@ module.exports =
 
         atom.config.onDidChange 'atom-autocomplete-php.autoloadPaths', () =>
             @clearCache()
+
+    ###*
+     * Function called when plugin is deactivate
+     * Cleanup every request in progress (#330)
+    ###
+    deactivate: () ->
+        for key, process of @currentProcesses
+            process.kill()
